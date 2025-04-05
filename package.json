@@ -1,7 +1,7 @@
 {
-  "name": "ts-call-graph",
+  "name": "tscg",
   "version": "0.1.0",
-  "description": "ts-call-graph",
+  "description": "built from yoshinari-yamanaka's ts-call-graph",
   "author": "vykaash",
   "contributors": [
     "yoshinari-yamanaka"
