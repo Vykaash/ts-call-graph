@@ -1,5 +1,5 @@
 {
-  "name": "tscg",
+  "name": "@vykaash/ts-call-graph",
   "version": "0.1.0",
   "description": "built from yoshinari-yamanaka's ts-call-graph",
   "author": "vykaash",
