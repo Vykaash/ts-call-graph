@@ -35,7 +35,7 @@ export class CallHierarchy {
   constructor(
     private service: ts.LanguageService,
     private option: Option,
-  ) {}
+  ) { }
 
   private logOutIf = (
     item:
@@ -122,8 +122,8 @@ export class CallHierarchy {
     item: ts.CallHierarchyItem,
   ): CallHierarchyItemWithChildren | undefined => {
     let result: CallHierarchyItemWithChildren | undefined = undefined;
-
     let id = 1;
+    const memoized = new Map<string, CallHierarchyItemWithChildren>();
     const innerGetIncomingCalls = (
       item: CallHierarchyItemWithId,
     ): CallHierarchyItemWithChildren => {
@@ -131,10 +131,17 @@ export class CallHierarchy {
         item.file,
         item.selectionSpan.start,
       );
+
       this.logOutIf(incomingCalls, "provideCallHierarchyIncomingCalls", {
         fileName: item.file,
         pos: item.selectionSpan.start,
       });
+
+      const key = `${item.file}:${item.selectionSpan.start}`;
+      if (memoized.has(key)) {
+        return memoized.get(key)!;
+      }
+
       const children = incomingCalls.map((incomingCall) =>
         innerGetIncomingCalls({ ...incomingCall.from, id: ++id }),
       );
@@ -149,6 +156,7 @@ export class CallHierarchy {
         { range, selectionRange },
         children,
       );
+      memoized.set(key, result);
       return result;
     };
 
@@ -190,6 +198,7 @@ export class CallHierarchy {
     let result: CallHierarchyItemWithChildren | undefined = undefined;
 
     let id = 1;
+    const memoized = new Map<string, CallHierarchyItemWithChildren>();
     const innerGetOutgoingCalls = (
       item: CallHierarchyItemWithId,
     ): CallHierarchyItemWithChildren => {
@@ -201,6 +210,11 @@ export class CallHierarchy {
         fileName: item.file,
         pos: item.selectionSpan.start,
       });
+      const key = `${item.file}:${item.selectionSpan.start}`;
+      if (memoized.has(key)) {
+        return memoized.get(key)!;
+      }
+
       const children = outgoingCalls.map((outgoingCall) =>
         innerGetOutgoingCalls({ ...outgoingCall.to, id: ++id }),
       );
@@ -215,6 +229,7 @@ export class CallHierarchy {
         { range, selectionRange },
         children,
       );
+      memoized.set(key, result);
       return result;
     };
 
