@@ -127,22 +127,26 @@ export class CallHierarchy {
     const innerGetIncomingCalls = (
       item: CallHierarchyItemWithId,
     ): CallHierarchyItemWithChildren => {
+      const key = `${item.file}:${item.selectionSpan.start}`;
+      if (memoized.has(key)) {
+        return memoized.get(key)!;
+      }
       const incomingCalls = this.service.provideCallHierarchyIncomingCalls(
         item.file,
         item.selectionSpan.start,
       );
 
-      this.logOutIf(incomingCalls, "provideCallHierarchyIncomingCalls", {
+      const uniqueIncomingCalls = incomingCalls.filter(call => {
+        const icKey = `${call.from.file}:${call.from.selectionSpan.start}`;
+        return icKey !== key;
+      })
+
+      this.logOutIf(uniqueIncomingCalls, "provideCallHierarchyIncomingCalls", {
         fileName: item.file,
         pos: item.selectionSpan.start,
       });
 
-      const key = `${item.file}:${item.selectionSpan.start}`;
-      if (memoized.has(key)) {
-        return memoized.get(key)!;
-      }
-
-      const children = incomingCalls.map((incomingCall) =>
+      const children = uniqueIncomingCalls.map((incomingCall) =>
         innerGetIncomingCalls({ ...incomingCall.from, id: ++id }),
       );
 
@@ -202,20 +206,28 @@ export class CallHierarchy {
     const innerGetOutgoingCalls = (
       item: CallHierarchyItemWithId,
     ): CallHierarchyItemWithChildren => {
-      const outgoingCalls = this.service.provideCallHierarchyOutgoingCalls(
-        item.file,
-        item.selectionSpan.start,
-      );
-      this.logOutIf(outgoingCalls, "provideCallHierarchyOutgoingCalls", {
-        fileName: item.file,
-        pos: item.selectionSpan.start,
-      });
+
       const key = `${item.file}:${item.selectionSpan.start}`;
       if (memoized.has(key)) {
         return memoized.get(key)!;
       }
 
-      const children = outgoingCalls.map((outgoingCall) =>
+      const outgoingCalls = this.service.provideCallHierarchyOutgoingCalls(
+        item.file,
+        item.selectionSpan.start,
+      );
+
+      const uniqueOutgoingCalls = outgoingCalls.filter(call => {
+        const ocKey = `${call.to.file}:${call.to.selectionSpan.start}`;
+        return ocKey !== key;
+      })
+
+      this.logOutIf(uniqueOutgoingCalls, "provideCallHierarchyOutgoingCalls", {
+        fileName: item.file,
+        pos: item.selectionSpan.start,
+      });
+
+      const children = uniqueOutgoingCalls.map((outgoingCall) =>
         innerGetOutgoingCalls({ ...outgoingCall.to, id: ++id }),
       );
 
