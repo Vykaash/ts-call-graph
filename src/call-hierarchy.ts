@@ -21,12 +21,26 @@ export type CallHierarchyItemWithChildren = Pick<
   };
   hasChildren: boolean; // we might wanna add or remove child nodes, when outputting. As an original info, just let them know if it has children.
   children: CallHierarchyItemWithChildren[];
+  treeHeight: number;
 };
 
 const isStackOverflow = (error: unknown): boolean =>
   error instanceof RangeError &&
   error.message === "Maximum call stack size exceeded";
 
+const calculateHeight = (item: CallHierarchyItemWithChildren): number => {
+  if (item.children.length === 0) {
+    item.treeHeight = 0;
+    return 0;
+  }
+
+  let maxChildHeight = 0;
+  for (const child of item.children) {
+    maxChildHeight = Math.max(maxChildHeight, calculateHeight(child));
+  }
+  item.treeHeight = maxChildHeight + 1;
+  return item.treeHeight
+}
 /**
  * TypeScript language service API walk through each AST nodes recursively.
  * So when stack overflow happens, we'll just get as much call graphs as possible.
@@ -99,24 +113,30 @@ export class CallHierarchy {
       selectionRange,
     }: { range: ts.LineAndCharacter; selectionRange: ts.LineAndCharacter },
     children: CallHierarchyItemWithChildren[],
-  ): CallHierarchyItemWithChildren => ({
-    id: item.id,
-    file: item.file,
-    kind: item.kind,
-    kindModifiers: item.kindModifiers,
-    name: item.name,
-    containerName: item.containerName,
-    range: {
-      line: range.line + 1, // line starts with index 0 with TypeScript Language service API specification
-      character: range.character,
-    },
-    selectionRange: {
-      line: selectionRange.line + 1, // line starts with index 0 with TypeScript Language service API specification
-      character: selectionRange.character,
-    },
-    hasChildren: !!children.length,
-    children,
-  });
+  ): CallHierarchyItemWithChildren => {
+    const result = {
+      id: item.id,
+      file: item.file,
+      kind: item.kind,
+      kindModifiers: item.kindModifiers,
+      name: item.name,
+      containerName: item.containerName,
+      range: {
+        line: range.line + 1, // line starts with index 0 with TypeScript Language service API specification
+        character: range.character,
+      },
+      selectionRange: {
+        line: selectionRange.line + 1, // line starts with index 0 with TypeScript Language service API specification
+        character: selectionRange.character,
+      },
+      hasChildren: !!children.length,
+      children,
+      treeHeight: 0
+    }
+
+    result.treeHeight = calculateHeight(result);
+    return result;
+  };
 
   private getIncomingCalls = (
     item: ts.CallHierarchyItem,
@@ -193,6 +213,7 @@ export class CallHierarchy {
       range: callSite.realPosition,
       hasChildren: true,
       children: [ch],
+      treeHeight: ch.treeHeight + 1,
     };
   };
 
@@ -274,6 +295,7 @@ export class CallHierarchy {
       range: callSite.realPosition,
       hasChildren: true,
       children: [ch],
+      treeHeight: ch.treeHeight + 1,
     };
   };
 }

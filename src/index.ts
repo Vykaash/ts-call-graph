@@ -41,10 +41,14 @@ export const main = async (): Promise<void> => {
   for (const callSite of callSites) {
     const outgoingCallHierarchy =
       callHierarchy.getOutgoingCallHierarchy(callSite);
-    if (!outgoingCallHierarchy) continue;
+
+    if (!outgoingCallHierarchy)
+      continue;
+
     chs.push(outgoingCallHierarchy);
   }
-
+  // descending order so more meaningful entries are at the top
+  chs.sort((a, b) => b.treeHeight - a.treeHeight);
   if (option.server) {
     startServer(chs, option);
   } else {
